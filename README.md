@@ -13,9 +13,12 @@ EOF
 ```
 === output scrolls by as usual ===
 
-copy output to clipboard? [y/N] y
+copy output to clipboard?  [Enter] yes, any other key no:
 copied: 24 lines, 1213 bytes
 ```
+
+Copying is what you almost always want, so it is bound to the reflex key: press
+Enter to copy, any other key to skip.
 
 ## Why
 
@@ -39,25 +42,43 @@ still copy it later.
 
 ## Install
 
-Linux, bash:
+Linux, bash. Uses `curl` or `wget`, whichever the machine has — a bare server
+often has only one of the two:
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/StefanoSalsano/cli2clip/main/cli2clip.sh -o ~/.cli2clip.sh
-grep -q cli2clip ~/.bashrc || echo '[ -f ~/.cli2clip.sh ] && . ~/.cli2clip.sh' >> ~/.bashrc
-. ~/.cli2clip.sh
+URL=https://raw.githubusercontent.com/StefanoSalsano/cli2clip/main/cli2clip.sh
+if   command -v curl >/dev/null 2>&1; then curl -fsSL "$URL" -o ~/.cli2clip.sh
+elif command -v wget >/dev/null 2>&1; then wget -qO ~/.cli2clip.sh "$URL"
+else echo "cli2clip: neither curl nor wget found" >&2; fi
+grep -q cli2clip ~/.bashrc 2>/dev/null || echo '[ -f ~/.cli2clip.sh ] && . ~/.cli2clip.sh' >> ~/.bashrc
+. ~/.cli2clip.sh 2>/dev/null
+if type cli2clip >/dev/null 2>&1; then
+	printf '\ncli2clip is installed and ready.\n\n  cli2clip <<%sEOF%s\n  hostname\n  EOF\n\nEnter copies the output, any other key skips it.\n\n' "'" "'"
+else
+	echo "cli2clip: installation failed, ~/.cli2clip.sh was not sourced" >&2
+fi
 ```
 
 Windows, PowerShell:
 
 ```powershell
-Invoke-WebRequest -Uri https://raw.githubusercontent.com/StefanoSalsano/cli2clip/main/cli2clip.ps1 -OutFile "$HOME\.cli2clip.ps1"
+$url = 'https://raw.githubusercontent.com/StefanoSalsano/cli2clip/main/cli2clip.ps1'
+Invoke-WebRequest -Uri $url -OutFile "$HOME\.cli2clip.ps1"
 if (!(Test-Path $PROFILE)) { New-Item -ItemType File -Path $PROFILE -Force | Out-Null }
 if (-not (Select-String -Path $PROFILE -Pattern cli2clip -Quiet)) { Add-Content $PROFILE '. "$HOME\.cli2clip.ps1"' }
 . "$HOME\.cli2clip.ps1"
+if (Get-Command cli2clip -ErrorAction SilentlyContinue) {
+    Write-Host "`ncli2clip is installed and ready.`n`n  cli2clip { hostname }`n`nEnter copies the output, any other key skips it.`n"
+} else {
+    Write-Host "cli2clip: installation failed, `$HOME\.cli2clip.ps1 was not sourced" -ForegroundColor Red
+}
 ```
 
 Both are idempotent: running them again updates the script without duplicating
-the line in the profile.
+the line in the profile. Both end by checking that the function is actually
+defined, so a silent failure — a download that produced an empty file, a profile
+that is not read — is reported instead of surfacing later as
+`cli2clip: command not found`.
 
 ## Usage
 

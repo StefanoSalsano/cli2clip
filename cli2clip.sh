@@ -44,21 +44,20 @@ cli2clip() {
 ${src}" 2>&1 | tee "$f"
 
 	echo
-	printf 'copy output to clipboard? [y/N] '
+	printf 'copy output to clipboard?  [Enter] yes, any other key no: '
 	# Read the answer from the terminal, not from stdin: stdin is the heredoc
 	# carrying the command block, and it has already been consumed.
+	# With -n1, pressing Enter returns an empty string: copying is the common
+	# case, so it gets the reflex key.
 	read -r -n1 ans </dev/tty
 	echo
-	case "$ans" in
-		y|Y|yes|YES)
-			if tmux load-buffer -w "$f" 2>/dev/null; then
-				echo "copied: $(wc -l <"$f") lines, $(wc -c <"$f") bytes"
-			else
-				echo "no tmux server reachable from here; output kept in $f"
-			fi
-			;;
-		*)
-			echo "not copied; output kept in $f"
-			;;
-	esac
+	if [ -z "$ans" ]; then
+		if tmux load-buffer -w "$f" 2>/dev/null; then
+			echo "copied: $(wc -l <"$f") lines, $(wc -c <"$f") bytes"
+		else
+			echo "no tmux server reachable from here; output kept in $f"
+		fi
+	else
+		echo "not copied; output kept in $f"
+	fi
 }

@@ -36,19 +36,22 @@ function cli2clip {
     & $Block 2>&1 | Tee-Object -FilePath $f
 
     Write-Host ""
-    Write-Host "copy output to clipboard? [y/N] " -NoNewline
+    Write-Host "copy output to clipboard?  [Enter] yes, any other key no: " -NoNewline
 
-    # Single keypress when the host supports it; fall back to a line-based
-    # prompt in hosts that have no raw UI (ISE, remoting, redirected input).
-    $ans = $null
+    # Copying is the common case, so it gets the reflex key: Enter confirms,
+    # anything else declines. Single keypress when the host supports it, with a
+    # line-based fallback for hosts that have no raw UI (ISE, remoting,
+    # redirected input) -- there an empty line means Enter, same semantics.
+    $copy = $false
     try {
-        $ans = $Host.UI.RawUI.ReadKey('NoEcho,IncludeKeyDown').Character
+        $key = $Host.UI.RawUI.ReadKey('NoEcho,IncludeKeyDown')
+        $copy = ($key.VirtualKeyCode -eq 13)
         Write-Host ""
     } catch {
-        $ans = Read-Host
+        $copy = [string]::IsNullOrEmpty((Read-Host))
     }
 
-    if ($ans -eq 'y' -or $ans -eq 'Y') {
+    if ($copy) {
         if (Test-Path $f) {
             Get-Content -Path $f -Raw | Set-Clipboard
             $lines = (Get-Content -Path $f | Measure-Object -Line).Lines
