@@ -1,0 +1,143 @@
+# cli2clip
+
+Run a block of shell commands, watch the output, then decide whether to put it
+in the clipboard.
+
+```bash
+cli2clip <<'EOF'
+git status --short
+git log --oneline -3
+EOF
+```
+
+```
+=== output scrolls by as usual ===
+
+copy output to clipboard? [y/N] y
+copied: 24 lines, 1213 bytes
+```
+
+## Why
+
+It exists for a specific, repetitive situation: you are working with an
+assistant, or a colleague, in a chat window, and the loop is always the same —
+they give you commands, you run them in a terminal, you have to get the output
+back into the chat. Selecting a screenful of text with the mouse, over ssh,
+inside tmux, is tedious and error-prone, and it silently truncates.
+
+Two details make the difference:
+
+* **the clipboard is written only at the end, and only if you say so.** A block
+  that takes twenty seconds must not hold your clipboard hostage while it runs:
+  in those twenty seconds you may well need it for something else;
+* **the capture is exact.** It is the real stdout and stderr of the commands,
+  not whatever happened to be visible on screen, so nothing is lost to the
+  scrollback and nothing extra is picked up.
+
+If you answer no, the capture file is kept and its path printed, so you can
+still copy it later.
+
+## Install
+
+Linux, bash:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/StefanoSalsano/cli2clip/main/cli2clip.sh -o ~/.cli2clip.sh
+grep -q cli2clip ~/.bashrc || echo '[ -f ~/.cli2clip.sh ] && . ~/.cli2clip.sh' >> ~/.bashrc
+. ~/.cli2clip.sh
+```
+
+Windows, PowerShell:
+
+```powershell
+Invoke-WebRequest -Uri https://raw.githubusercontent.com/StefanoSalsano/cli2clip/main/cli2clip.ps1 -OutFile "$HOME\.cli2clip.ps1"
+if (!(Test-Path $PROFILE)) { New-Item -ItemType File -Path $PROFILE -Force | Out-Null }
+if (-not (Select-String -Path $PROFILE -Pattern cli2clip -Quiet)) { Add-Content $PROFILE '. "$HOME\.cli2clip.ps1"' }
+. "$HOME\.cli2clip.ps1"
+```
+
+Both are idempotent: running them again updates the script without duplicating
+the line in the profile.
+
+## Usage
+
+The bash version takes the commands on standard input, so use a **quoted**
+heredoc (`<<'EOF'`, with the quotes) unless you want the calling shell to expand
+things before they are run:
+
+```bash
+cli2clip <<'EOF'
+for f in /etc/hostname /etc/machine-id; do echo "--- $f"; cat "$f"; done
+EOF
+```
+
+The PowerShell version takes a script block, which is multi-line by nature:
+
+```powershell
+cli2clip {
+    Get-ChildItem C:\GITs -Directory | Select-Object Name, LastWriteTime
+}
+```
+
+Anything the shell can do works inside the block: loops, pipelines, heredocs,
+function definitions. The block runs in a subshell, so `cd` and variables set
+inside it do not leak into your session.
+
+## Failures
+
+In the bash version every command that exits non-zero is reported where it
+fails, without stopping the block:
+
+```
+!! FAILED (exit 2): ls /nonexistent
+```
+
+A diagnostic block usually wants the remaining commands to run even if one of
+them fails, which is why the block is not aborted. Commands whose failure is
+already handled stay silent — `grep pattern file || true`, `if cmd; then`,
+`a && b` — so the expected non-zero exits of tools like `grep` do not produce
+noise.
+
+The PowerShell version does not do this: PowerShell has no equivalent that
+catches the exit status of *native* commands without wrapping each one, and
+wrapping each one would rule out the multi-line constructs that make the script
+block worth using.
+
+## How the clipboard is reached
+
+On Windows, `Set-Clipboard` writes to the local clipboard.
+
+On Linux there is no clipboard to write to — X11 or Wayland may not even be
+running on the machine you are logged into. The bash version therefore goes
+through **tmux**, which forwards the text to the terminal emulator using the
+OSC 52 escape sequence. The clipboard that ends up holding the text is the one
+of the machine where your *terminal* runs, which is what you want when you are
+working over ssh.
+
+This has two consequences worth knowing:
+
+* it needs a running tmux server on the machine where `cli2clip` runs, and
+  `set-clipboard` enabled (`tmux show -g set-clipboard`, set it with
+  `tmux set -g set-clipboard on`);
+* it needs a terminal emulator that supports OSC 52. Windows Terminal, iTerm2,
+  kitty, foot and recent xterm do; some others do not, and a few impose a size
+  limit on what they will accept.
+
+If tmux is not reachable, nothing is lost: the capture file stays and its path
+is printed.
+
+### Nested sessions
+
+If you are several hops deep — ssh into a host, then into a container, then into
+a virtual machine — the innermost shell usually has no tmux server of its own,
+and `cli2clip` there will just keep the file. That is expected. The tmux session
+you started at the *outer* hop can still see everything that scrolled past, so
+capture from there instead:
+
+```bash
+tmux capture-pane -p -S -500 | tail -n 100 | tmux load-buffer -w -
+```
+
+## License
+
+MIT. See [LICENSE](LICENSE).
