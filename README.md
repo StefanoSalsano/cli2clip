@@ -88,37 +88,35 @@ own, and it cannot read this repository. Paste the following into the
 conversation once, at the start, and it will start producing blocks you can run
 as they are:
 
-> When you need me to run commands and report the output back to you, give me a
-> single `cli2clip` block instead of loose commands.
->
-> On Linux, bash:
->
-> ```
-> cli2clip <<'EOF'
-> <your commands>
-> EOF
-> ```
->
-> On Windows, PowerShell:
->
-> ```
-> cli2clip { <your commands> }
-> ```
->
-> It runs the block, shows me the output, and when the block has finished it
-> asks whether to copy it. I press Enter and paste it back to you.
->
-> Rules for those blocks:
->
-> * one block, ready to paste as it is, with no placeholders for me to fill in;
-> * begin with an absolute `cd`, never rely on the directory I happen to be in;
-> * state in a comment which machine and which shell the block is for, when
->   there is more than one;
-> * add `|| true` where a non-zero exit is expected — `grep` finding nothing,
->   for instance — otherwise it is reported as a failure;
-> * to create a file, do not paste its contents into the terminal: long pastes
->   get mangled, especially through ssh and nested sessions. Give me the file
->   another way and a command to put it in place.
+````
+When you need me to run commands and report the output back to you, give me a
+single cli2clip block instead of loose commands.
+
+On Linux, bash:
+
+    cli2clip <<'EOF'
+    <your commands>
+    EOF
+
+On Windows, PowerShell:
+
+    cli2clip { <your commands> }
+
+It runs the block, shows me the output, and when the block has finished it asks
+whether to copy it. I press Enter and paste it back to you.
+
+Rules for those blocks:
+
+- one block, ready to paste as it is, with no placeholders for me to fill in;
+- begin with an absolute cd, never rely on the directory I happen to be in;
+- state in a comment which machine and which shell the block is for, when there
+  is more than one;
+- add "|| true" where a non-zero exit is expected (grep finding nothing, for
+  instance), otherwise it is reported as a failure;
+- to create a file, do not paste its contents into the terminal: long pastes
+  get mangled, especially through ssh and nested sessions. Give me the file
+  another way and a command to put it in place.
+````
 
 The last two rules are the ones that repay themselves fastest. Assistants
 produce `grep` pipelines constantly, and a false `!! FAILED` on every one of
