@@ -11,11 +11,21 @@ EOF
 ```
 
 ```
-=== output scrolls by as usual ===
+════ git status --short
+ M README.md
+
+════ git log --oneline -3
+41efa13 tools: add build-bpftool-for-guest.sh
+2ce8325 podman: isolate container networking in its own netns
+9f20ca3 chore: remove leftover debug prints
 
 copy output to clipboard?  [Enter] yes, any other key no:
 copied: 24 lines, 1213 bytes
 ```
+
+Each command is echoed above its own output, which is what makes the transcript
+readable once it is pasted somewhere else: three `ls` in a row, or the same
+command run in three directories, are otherwise impossible to tell apart.
 
 Copying is what you almost always want, so it is bound to the reflex key: press
 Enter to copy, any other key to skip.
@@ -113,6 +123,10 @@ Rules for those blocks:
   is more than one;
 - add "|| true" where a non-zero exit is expected (grep finding nothing, for
   instance), otherwise it is reported as a failure;
+- on Linux, each command is normally echoed above its own output, but that is
+  dropped for a block containing a multi-line loop or a here document, because
+  such a block cannot be split. When you write one of those, put explicit echo
+  lines in yourself to separate the sections;
 - to create a file, do not paste its contents into the terminal: long pastes
   get mangled, especially through ssh and nested sessions. Give me the file
   another way and a command to put it in place.
@@ -146,7 +160,27 @@ cli2clip {
 
 Anything the shell can do works inside the block: loops, pipelines, heredocs,
 function definitions. The block runs in a subshell, so `cd` and variables set
-inside it do not leak into your session.
+inside it do not leak into your session — but they are visible to the following
+commands *within* the block, so `URL=...` on one line and `wget "$URL"` on the
+next work as you would expect.
+
+### About those `════` labels
+
+In bash, echoing each command separately is only possible when every line is a
+complete command. If the block contains a multi-line `for`, a here document or a
+line continuation, splitting it would change what it does, so it is run as a
+whole and the labels are dropped. Labels are a convenience; running the block
+correctly is not. A one-line loop — `for f in a b; do echo $f; done` — is a
+single complete command and keeps its label.
+
+The PowerShell version has no such limitation: it asks the parser for the
+top-level statements, so a multi-line `foreach` is one statement and stays
+intact.
+
+Note that neither version traces *inside* loops and functions, which is what
+`set -x` would do. That would triple the length of the transcript with
+implementation details, and the transcript is the thing you are about to paste
+somewhere.
 
 ## Failures
 
