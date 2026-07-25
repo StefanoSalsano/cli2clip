@@ -31,9 +31,39 @@ function cli2clip {
 
     $f = Join-Path $env:TEMP ("cli2clip-" + [guid]::NewGuid().ToString('N').Substring(0, 6) + ".txt")
 
+    # Echo each command above its own output: without it, several commands
+    # producing similar output are indistinguishable once pasted somewhere else.
+    # The parser gives us the top-level statements with their original text, so
+    # a multi-line foreach or if is one statement and stays intact -- no
+    # guessing needed. Statements are dot-sourced so that a variable set by one
+    # is visible to the next.
+    #
     # 2>&1 folds the error stream into the output so that failures are captured
     # too, instead of only appearing on screen.
-    & $Block 2>&1 | Tee-Object -FilePath $f
+    $statements = $null
+    try { $statements = $Block.Ast.EndBlock.Statements } catch { }
+
+    if ($statements -and $statements.Count -gt 0) {
+        & {
+            foreach ($st in $statements) {
+                Write-Output ""
+                Write-Output "════ $($st.Extent.Text)"
+                . ([scriptblock]::Create($st.Extent.Text))
+            }
+        } 2>&1 | Tee-Object -FilePath $f
+    } else {
+        & $Block 2>&1 | Tee-Object -FilePath $f
+    }
+
+    # Discard whatever was typed while the block was running. A block can take
+    # minutes, and keystrokes that land in the console meanwhile stay queued: the
+    # question below would take the first of them as the answer, declining the
+    # copy for a paste the user never meant as a reply.
+    try {
+        while ($Host.UI.RawUI.KeyAvailable) {
+            $null = $Host.UI.RawUI.ReadKey('NoEcho,IncludeKeyDown')
+        }
+    } catch { }
 
     Write-Host ""
     Write-Host "copy output to clipboard?  [Enter] yes, any other key no: " -NoNewline

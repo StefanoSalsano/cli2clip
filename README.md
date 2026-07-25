@@ -42,10 +42,14 @@ Two details make the difference:
 
 * **the clipboard is written only at the end, and only if you say so.** A block
   that takes twenty seconds must not hold your clipboard hostage while it runs:
-  in those twenty seconds you may well need it for something else;
-* **the capture is exact.** It is the real stdout and stderr of the commands,
-  not whatever happened to be visible on screen, so nothing is lost to the
-  scrollback and nothing extra is picked up.
+  in those twenty seconds you may well need it for something else. Anything you
+  typed or pasted meanwhile is discarded before the question is asked, so it can
+  neither answer it nor fall through to the shell;
+* **nothing is lost to the scrollback.** In bash the capture is the real stdout
+  and stderr of the commands, not whatever happened to be visible on screen. In
+  PowerShell the pipeline objects are rendered to text as they are captured, so
+  a wide table is wrapped or truncated at the console width exactly as it is on
+  screen: add `| Out-String -Width 200` when the full width matters.
 
 If you answer no, the capture file is kept and its path printed, so you can
 still copy it later.
@@ -123,6 +127,11 @@ Rules for those blocks:
   is more than one;
 - add "|| true" where a non-zero exit is expected (grep finding nothing, for
   instance), otherwise it is reported as a failure;
+- that failure marker exists on Linux only. In PowerShell nothing tells me that
+  a command failed, so where it matters, test $LASTEXITCODE in the block and
+  print something I can see;
+- in PowerShell a Set-Location inside the block stays in effect afterwards, which
+  is one more reason to start every block with an absolute cd;
 - on Linux, each command is normally echoed above its own output, but that is
   dropped for a block containing a multi-line loop or a here document, because
   such a block cannot be split. When you write one of those, put explicit echo
@@ -159,10 +168,16 @@ cli2clip {
 ```
 
 Anything the shell can do works inside the block: loops, pipelines, heredocs,
-function definitions. The block runs in a subshell, so `cd` and variables set
-inside it do not leak into your session — but they are visible to the following
-commands *within* the block, so `URL=...` on one line and `wget "$URL"` on the
-next work as you would expect.
+function definitions. Variables set inside do not leak into your session, but
+they are visible to the following commands *within* the block, so `URL=...` on
+one line and `wget "$URL"` on the next work as you would expect.
+
+The current directory behaves differently on the two shells. Bash runs the block
+in a subshell, so a `cd` inside it is gone when the block ends. PowerShell has no
+subshell to run it in: the current location belongs to the session rather than to
+the scope, so a `Set-Location` inside a block is still in effect afterwards. The
+habit that works on both is to begin every block with an absolute `cd`, rather
+than relying on where the previous one left you.
 
 ### About those `════` labels
 
