@@ -11,10 +11,10 @@ EOF
 ```
 
 ```
-════ git status --short
+==== git status --short
  M README.md
 
-════ git log --oneline -3
+==== git log --oneline -3
 41efa13 tools: add build-bpftool-for-guest.sh
 2ce8325 podman: isolate container networking in its own netns
 9f20ca3 chore: remove leftover debug prints
@@ -179,7 +179,7 @@ the scope, so a `Set-Location` inside a block is still in effect afterwards. The
 habit that works on both is to begin every block with an absolute `cd`, rather
 than relying on where the previous one left you.
 
-### About those `════` labels
+### About those `====` labels
 
 In bash, echoing each command separately is only possible when every line is a
 complete command. If the block contains a multi-line `for`, a here document or a

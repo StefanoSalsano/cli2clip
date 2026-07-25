@@ -47,7 +47,7 @@ function cli2clip {
         & {
             foreach ($st in $statements) {
                 Write-Output ""
-                Write-Output "════ $($st.Extent.Text)"
+                Write-Output "==== $($st.Extent.Text)"
                 . ([scriptblock]::Create($st.Extent.Text))
             }
         } 2>&1 | Tee-Object -FilePath $f
@@ -59,10 +59,15 @@ function cli2clip {
     # minutes, and keystrokes that land in the console meanwhile stay queued: the
     # question below would take the first of them as the answer, declining the
     # copy for a paste the user never meant as a reply.
+    #
+    # [Console]::KeyAvailable and [Console]::ReadKey are used as a pair on
+    # purpose. RawUI.KeyAvailable also reports events that are not key presses --
+    # key releases, window and mouse events -- while RawUI.ReadKey with
+    # IncludeKeyDown discards those and keeps waiting for a real key, so the two
+    # together can block here instead of draining. KeyAvailable throws when the
+    # input is redirected, hence the try.
     try {
-        while ($Host.UI.RawUI.KeyAvailable) {
-            $null = $Host.UI.RawUI.ReadKey('NoEcho,IncludeKeyDown')
-        }
+        while ([Console]::KeyAvailable) { $null = [Console]::ReadKey($true) }
     } catch { }
 
     Write-Host ""

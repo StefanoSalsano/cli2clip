@@ -76,7 +76,7 @@ cli2clip() {
 		while IFS= read -r line; do
 			case "$line" in ''|\#*) continue ;; esac
 			quoted=${line//\'/\'\\\'\'}
-			script="${script}printf '\n════ %s\n' '${quoted}'
+			script="${script}printf '\n==== %s\n' '${quoted}'
 ${line}
 "
 		done <<< "$src"
