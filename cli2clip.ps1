@@ -71,19 +71,23 @@ function cli2clip {
     } catch { }
 
     Write-Host ""
-    Write-Host "copy output to clipboard?  [Enter] yes, any other key no: " -NoNewline
+    Write-Host "copy output to clipboard?  [Enter, y, Y] yes, any other key no: " -NoNewline
 
     # Copying is the common case, so it gets the reflex key: Enter confirms,
-    # anything else declines. Single keypress when the host supports it, with a
-    # line-based fallback for hosts that have no raw UI (ISE, remoting,
-    # redirected input) -- there an empty line means Enter, same semantics.
+    # anything else declines. 'y' is accepted as well, because that is what
+    # fingers type at a yes/no question, and having it mean *no* was a trap.
+    # Single keypress when the host supports it, with a line-based fallback for
+    # hosts that have no raw UI (ISE, remoting, redirected input) -- there an
+    # empty line means Enter, same semantics.
     $copy = $false
     try {
         $key = $Host.UI.RawUI.ReadKey('NoEcho,IncludeKeyDown')
-        $copy = ($key.VirtualKeyCode -eq 13)
+        # -eq on strings is case-insensitive in PowerShell, so 'Y' is covered too.
+        $copy = ($key.VirtualKeyCode -eq 13) -or ("$($key.Character)" -eq 'y')
         Write-Host ""
     } catch {
-        $copy = [string]::IsNullOrEmpty((Read-Host))
+        $answer = Read-Host
+        $copy = [string]::IsNullOrEmpty($answer) -or ($answer -eq 'y')
     }
 
     if ($copy) {

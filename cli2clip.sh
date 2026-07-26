@@ -94,14 +94,15 @@ ${script}" 2>&1 | tee "$f"
 	# copy -- and hand the rest to the shell as a command of its own.
 	while IFS= read -r -s -t 0.05 -n 4096 _; do :; done </dev/tty 2>/dev/null
 
-	printf 'copy output to clipboard?  [Enter] yes, any other key no: '
+	printf 'copy output to clipboard?  [Enter, y, Y] yes, any other key no: '
 	# Read the answer from the terminal, not from stdin: stdin is the heredoc
 	# carrying the command block, and it has already been consumed.
 	# With -n1, pressing Enter returns an empty string: copying is the common
-	# case, so it gets the reflex key.
+	# case, so it gets the reflex key. 'y' is accepted too, because that is what
+	# fingers type at a yes/no question, and having it mean *no* was a trap.
 	read -r -n1 ans </dev/tty
 	echo
-	if [ -z "$ans" ]; then
+	if [ -z "$ans" ] || [ "$ans" = y ] || [ "$ans" = Y ]; then
 		if tmux load-buffer -w "$f" 2>/dev/null; then
 			echo "copied: $(wc -l <"$f") lines, $(wc -c <"$f") bytes"
 		else

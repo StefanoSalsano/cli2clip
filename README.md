@@ -19,7 +19,7 @@ EOF
 2ce8325 podman: isolate container networking in its own netns
 9f20ca3 chore: remove leftover debug prints
 
-copy output to clipboard?  [Enter] yes, any other key no:
+copy output to clipboard?  [Enter, y, Y] yes, any other key no:
 copied: 24 lines, 1213 bytes
 ```
 
@@ -28,7 +28,8 @@ readable once it is pasted somewhere else: three `ls` in a row, or the same
 command run in three directories, are otherwise impossible to tell apart.
 
 Copying is what you almost always want, so it is bound to the reflex key: press
-Enter to copy, any other key to skip.
+Enter to copy, or `y` if that is what your fingers type at a yes/no question.
+Any other key skips it.
 
 ## Why
 
@@ -67,7 +68,7 @@ else echo "cli2clip: neither curl nor wget found" >&2; fi
 grep -q cli2clip ~/.bashrc 2>/dev/null || echo '[ -f ~/.cli2clip.sh ] && . ~/.cli2clip.sh' >> ~/.bashrc
 . ~/.cli2clip.sh 2>/dev/null
 if type cli2clip >/dev/null 2>&1; then
-	printf '\ncli2clip is installed and ready.\n\n  cli2clip <<%sEOF%s\n  hostname\n  EOF\n\nEnter copies the output, any other key skips it.\n\n' "'" "'"
+	printf '\ncli2clip is installed and ready.\n\n  cli2clip <<%sEOF%s\n  hostname\n  EOF\n\nEnter or y copies the output, any other key skips it.\n\n' "'" "'"
 else
 	echo "cli2clip: installation failed, ~/.cli2clip.sh was not sourced" >&2
 fi
@@ -82,7 +83,7 @@ if (!(Test-Path $PROFILE)) { New-Item -ItemType File -Path $PROFILE -Force | Out
 if (-not (Select-String -Path $PROFILE -Pattern cli2clip -Quiet)) { Add-Content $PROFILE '. "$HOME\.cli2clip.ps1"' }
 . "$HOME\.cli2clip.ps1"
 if (Get-Command cli2clip -ErrorAction SilentlyContinue) {
-    Write-Host "`ncli2clip is installed and ready.`n`n  cli2clip { hostname }`n`nEnter copies the output, any other key skips it.`n"
+    Write-Host "`ncli2clip is installed and ready.`n`n  cli2clip { hostname }`n`nEnter or y copies the output, any other key skips it.`n"
 } else {
     Write-Host "cli2clip: installation failed, `$HOME\.cli2clip.ps1 was not sourced" -ForegroundColor Red
 }
