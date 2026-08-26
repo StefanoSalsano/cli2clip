@@ -38,8 +38,14 @@ function cli2clip {
     # guessing needed. Statements are dot-sourced so that a variable set by one
     # is visible to the next.
     #
-    # 2>&1 folds the error stream into the output so that failures are captured
-    # too, instead of only appearing on screen.
+    # *>&1 folds every stream into the output -- errors, warnings and, crucially,
+    # the information stream that Write-Host writes to. With the error stream
+    # alone the labels a block prints with Write-Host reach the screen but not
+    # the capture, so the pasted transcript shows "==== Write-Host ..." with
+    # nothing under it (found 26/8/2026, on blocks using Write-Host as section
+    # headings). What the terminal showed is what belongs in the clipboard.
+    # Cost: Write-Host -ForegroundColor loses its colour, the text now travels
+    # through the pipeline.
     $statements = $null
     try { $statements = $Block.Ast.EndBlock.Statements } catch { }
 
@@ -50,9 +56,9 @@ function cli2clip {
                 Write-Output "==== $($st.Extent.Text)"
                 . ([scriptblock]::Create($st.Extent.Text))
             }
-        } 2>&1 | Tee-Object -FilePath $f
+        } *>&1 | Tee-Object -FilePath $f
     } else {
-        & $Block 2>&1 | Tee-Object -FilePath $f
+        & $Block *>&1 | Tee-Object -FilePath $f
     }
 
     # Discard whatever was typed while the block was running. A block can take
