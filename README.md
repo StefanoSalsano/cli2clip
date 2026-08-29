@@ -180,6 +180,15 @@ the scope, so a `Set-Location` inside a block is still in effect afterwards. The
 habit that works on both is to begin every block with an absolute `cd`, rather
 than relying on where the previous one left you.
 
+Commands inside a block cannot read from the terminal: the block's standard
+input is empty on both shells (in bash it is the heredoc, already consumed; in
+PowerShell the process's stdin is pointed at `NUL` for the duration of the
+block). A command that would wait for keyboard input -- `ssh` without `-n`, a
+password prompt -- gets end-of-file instead of hanging the block, which is the
+behaviour you want in a transcript. Input fed to a command *within* the block --
+`"..." | ssh host "bash -s"`, a here document -- is unaffected. Commands that do
+need you at the keyboard belong outside a block.
+
 ### About those `====` labels
 
 In bash, echoing each command separately is only possible when every line is a
