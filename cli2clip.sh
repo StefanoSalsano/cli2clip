@@ -27,6 +27,14 @@
 #
 # https://github.com/StefanoSalsano/cli2clip -- MIT licensed
 
+# Say so when the file is sourced a second time. The first load, from .bashrc,
+# stays silent; a reload after editing the file is the moment you want a
+# confirmation, and the path tells you which copy you loaded -- the repo or the
+# installed one -- which is the usual mistake.
+if declare -F cli2clip >/dev/null 2>&1; then
+	echo "cli2clip: reloaded from ${BASH_SOURCE[0]}"
+fi
+
 # Can the block be split into one command per line?
 #
 # When it can, each command is echoed above its own output, which is what makes

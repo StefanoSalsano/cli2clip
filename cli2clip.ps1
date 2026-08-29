@@ -22,6 +22,14 @@
 #
 # https://github.com/StefanoSalsano/cli2clip -- MIT licensed
 
+# Say so when the file is sourced a second time. The first load, from the
+# profile, stays silent; a reload after editing the file is the moment you want
+# a confirmation, and the path tells you which copy you loaded -- the repo or
+# the installed one -- which is the usual mistake.
+if (Get-Command cli2clip -ErrorAction SilentlyContinue) {
+    Write-Host "cli2clip: reloaded from $PSCommandPath"
+}
+
 function cli2clip {
     [CmdletBinding()]
     param(
