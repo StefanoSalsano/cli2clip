@@ -21,7 +21,8 @@
 #     EOF
 #
 # `cli2clip --version` prints the version and the path this file was loaded
-# from, and is answered before the tmux check, so it works anywhere.
+# from, and `cli2clip --update` replaces ~/.cli2clip.sh with the current one
+# from GitHub. Both are answered before the tmux check, so they work anywhere.
 #
 # The output is printed as it happens and captured to a temporary file. When the
 # whole block has finished, and only then, you are asked whether to copy it to
@@ -43,8 +44,13 @@
 # it because on a machine with several copies around ("the repo one or the
 # installed one?") the path is half the answer to "which version am I running".
 _cli2clip_was=${_CLI2CLIP_VERSION:-unknown}
-_CLI2CLIP_VERSION='1.0.1'
+_CLI2CLIP_VERSION='1.1.0'
 _CLI2CLIP_SOURCE=${BASH_SOURCE[0]}
+
+# Where `--update` downloads from. It is a constant and not a setting: the one
+# thing that must stay visible is which URL the update came from, and a value
+# that can be overridden quietly defeats that.
+_CLI2CLIP_URL='https://raw.githubusercontent.com/StefanoSalsano/cli2clip/main/cli2clip.sh'
 
 # Say so when the file is sourced a second time. The first load, from .bashrc,
 # stays silent; a reload after editing or updating the file is the moment you
@@ -90,6 +96,68 @@ _cli2clip_decomposable() {
 	return 0
 }
 
+# Download the current script and replace the installed copy.
+#
+# This buys robustness over re-running the README's install snippet, not
+# safety: same URL, same TLS, same trust in GitHub, and no signature either
+# way. What it does buy is that the download is validated -- non-empty, and
+# accepted by `bash -n` -- BEFORE it replaces anything, where `curl -o` writes
+# straight onto the installed copy and a truncated transfer leaves you with a
+# broken one. The URL is printed every time for the opposite reason: unlike the
+# snippet, which you paste from a page you are looking at, here the address
+# comes from the copy already on disk, so it has to be shown rather than
+# trusted silently.
+#
+# It updates ~/.cli2clip.sh, the documented install path, and never the file
+# this shell happened to load: sourcing a git clone and then updating would
+# overwrite uncommitted work with whatever is on GitHub.
+_cli2clip_update() {
+	local target=$HOME/.cli2clip.sh tmp new ok=1
+
+	tmp=$(mktemp "${target}.XXXXXX") || return 1
+	echo "cli2clip: downloading $_CLI2CLIP_URL"
+	if command -v curl >/dev/null 2>&1; then
+		curl -fsSL "$_CLI2CLIP_URL" -o "$tmp" || ok=0
+	elif command -v wget >/dev/null 2>&1; then
+		wget -qO "$tmp" "$_CLI2CLIP_URL" || ok=0
+	else
+		echo "cli2clip: neither curl nor wget found" >&2
+		ok=0
+	fi
+
+	if [ "$ok" = 0 ]; then
+		rm -f "$tmp"
+		echo "cli2clip: download failed, $target left untouched" >&2
+		return 1
+	fi
+	if [ ! -s "$tmp" ]; then
+		rm -f "$tmp"
+		echo "cli2clip: downloaded file is empty, $target left untouched" >&2
+		return 1
+	fi
+	if ! bash -n "$tmp" 2>/dev/null; then
+		rm -f "$tmp"
+		echo "cli2clip: downloaded file is not valid bash, $target left untouched" >&2
+		return 1
+	fi
+
+	new=$(sed -n "s/^_CLI2CLIP_VERSION='\(.*\)'\$/\1/p" "$tmp" | head -n1)
+	[ -n "$new" ] || new=unknown
+
+	# Same directory as the target, so this is a rename and not a copy: the
+	# installed file is either the old one or the new one, never half of it.
+	mv "$tmp" "$target" || { rm -f "$tmp"; return 1; }
+
+	echo "cli2clip: $target updated, $_CLI2CLIP_VERSION -> $new"
+	if [ "$_CLI2CLIP_SOURCE" != "$target" ]; then
+		echo "cli2clip: note, this shell had loaded $_CLI2CLIP_SOURCE, which was not touched"
+	fi
+	# A function cannot cleanly replace itself while it is running, so the
+	# reload is yours to do; the reload message then reports the new version,
+	# which is the confirmation that the update took.
+	echo "cli2clip: run '. $target' to load it in this shell"
+}
+
 cli2clip() {
 	local f ans src prelude script line quoted no_tmux=
 
@@ -113,6 +181,7 @@ cli2clip() {
 			printf 'cli2clip %s\nloaded from %s\n' \
 				"$_CLI2CLIP_VERSION" "$_CLI2CLIP_SOURCE"
 			return 0 ;;
+		--update) _cli2clip_update; return $? ;;
 		--no-tmux) no_tmux=1; shift ;;
 		-*) echo "cli2clip: unknown option $1" >&2; return 2 ;;
 	esac

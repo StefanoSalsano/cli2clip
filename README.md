@@ -90,7 +90,24 @@ if (Get-Command cli2clip -ErrorAction SilentlyContinue) {
 ```
 
 Both are idempotent: running them again updates the script without duplicating
-the line in the profile. Both end by checking that the function is actually
+the line in the profile.
+
+On bash you can also update in place:
+
+```bash
+cli2clip --update
+```
+
+It downloads the same file from the same URL -- which it prints, every time --
+but checks that what arrived is non-empty and is accepted by `bash -n` *before*
+replacing `~/.cli2clip.sh`, where the snippet's `curl -o` writes straight onto
+it and a truncated transfer leaves a broken copy. It is robustness, not extra
+safety: same source, same TLS, no signature either way, and the address comes
+from the copy already on your disk rather than from a page you are reading.
+It always updates `~/.cli2clip.sh` and never the file the current shell loaded,
+so sourcing a clone and then updating cannot overwrite uncommitted work. A
+running function cannot replace itself, so it tells you to run `. ~/.cli2clip.sh`;
+the reload message then reports the new version, which is the confirmation. Both end by checking that the function is actually
 defined, so a silent failure — a download that produced an empty file, a profile
 that is not read — is reported instead of surfacing later as
 `cli2clip: command not found`.
@@ -173,8 +190,9 @@ because the clipboard could not be reached either way; `--no-tmux` runs the bloc
 anyway. See [How the clipboard is reached](#how-the-clipboard-is-reached).
 
 `cli2clip --version` prints the version and the path the function was loaded
-from. It is answered before the tmux check, so it works on any machine, which is
-where you need it.
+from, and `cli2clip --update` replaces the installed copy with the current one.
+Both are answered before the tmux check, so they work on any machine -- which is
+where you need them.
 
 Anything the shell can do works inside the block: loops, pipelines, heredocs,
 function definitions. Variables set inside do not leak into your session, but
@@ -294,12 +312,19 @@ The bash version prints it:
 
 ```
 $ cli2clip --version
-cli2clip 1.0.1
+cli2clip 1.1.0
 loaded from /home/user/.cli2clip.sh
 ```
 
 The path is there because the question behind "which version" is usually "which
-copy am I running" -- the installed one or a clone. A copy installed before
+copy am I running" -- the installed one or a clone. Reloading the file reports
+the same thing, with the version it replaced:
+
+```
+$ . ~/.cli2clip.sh
+cli2clip: reloaded 1.1.0 (was 1.0.1) from /home/user/.cli2clip.sh
+```
+ A copy installed before
 1.0.0 has no such option and answers `unknown option --version`, which is an
 answer of its own. The PowerShell script declares the same number in its header;
 a `-Version` switch there is not implemented yet.
