@@ -105,9 +105,18 @@ it and a truncated transfer leaves a broken copy. It is robustness, not extra
 safety: same source, same TLS, no signature either way, and the address comes
 from the copy already on your disk rather than from a page you are reading.
 It always updates `~/.cli2clip.sh` and never the file the current shell loaded,
-so sourcing a clone and then updating cannot overwrite uncommitted work. A
-running function cannot replace itself, so it tells you to run `. ~/.cli2clip.sh`;
-the reload message then reports the new version, which is the confirmation. Both end by checking that the function is actually
+so sourcing a clone and then updating cannot overwrite uncommitted work. On
+bash 4 or later it then loads the new file itself, and the reload message
+reports the version that is now in effect:
+
+```
+cli2clip: /home/user/.cli2clip.sh updated, 1.1.0 -> 1.2.0
+cli2clip: reloaded 1.2.0 (was 1.1.0) from /home/user/.cli2clip.sh
+```
+
+Below bash 4 it prints `. ~/.cli2clip.sh` for you to run instead: redefining a
+running function has only been tried on bash 5, and an untested path is not one
+to take silently. Both end by checking that the function is actually
 defined, so a silent failure — a download that produced an empty file, a profile
 that is not read — is reported instead of surfacing later as
 `cli2clip: command not found`.
@@ -312,7 +321,7 @@ The bash version prints it:
 
 ```
 $ cli2clip --version
-cli2clip 1.1.0
+cli2clip 1.2.0
 loaded from /home/user/.cli2clip.sh
 ```
 
@@ -322,7 +331,7 @@ the same thing, with the version it replaced:
 
 ```
 $ . ~/.cli2clip.sh
-cli2clip: reloaded 1.1.0 (was 1.0.1) from /home/user/.cli2clip.sh
+cli2clip: reloaded 1.2.0 (was 1.1.0) from /home/user/.cli2clip.sh
 ```
  A copy installed before
 1.0.0 has no such option and answers `unknown option --version`, which is an

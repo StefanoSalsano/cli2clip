@@ -44,7 +44,7 @@
 # it because on a machine with several copies around ("the repo one or the
 # installed one?") the path is half the answer to "which version am I running".
 _cli2clip_was=${_CLI2CLIP_VERSION:-unknown}
-_CLI2CLIP_VERSION='1.1.0'
+_CLI2CLIP_VERSION='1.2.0'
 _CLI2CLIP_SOURCE=${BASH_SOURCE[0]}
 
 # Where `--update` downloads from. It is a constant and not a setting: the one
@@ -152,10 +152,20 @@ _cli2clip_update() {
 	if [ "$_CLI2CLIP_SOURCE" != "$target" ]; then
 		echo "cli2clip: note, this shell had loaded $_CLI2CLIP_SOURCE, which was not touched"
 	fi
-	# A function cannot cleanly replace itself while it is running, so the
-	# reload is yours to do; the reload message then reports the new version,
-	# which is the confirmation that the update took.
-	echo "cli2clip: run '. $target' to load it in this shell"
+	# Load it here, so that the update is one step and not two. A function
+	# being redefined by a file it is itself sourcing is fine: the running
+	# instance finishes with the body it started with, and the new definitions
+	# take effect from the next call. Verified on bash 5.1; NOT tested below
+	# bash 4, which is why older shells keep the manual reload -- the boundary
+	# is what has been tried, not a known breakage, and the fallback is simply
+	# the behaviour this had before.
+	if [ "${BASH_VERSINFO[0]:-0}" -ge 4 ]; then
+		# The reload message printed by the file itself is the confirmation
+		# that the new version is the one now loaded.
+		. "$target"
+	else
+		echo "cli2clip: run '. $target' to load it in this shell"
+	fi
 }
 
 cli2clip() {
