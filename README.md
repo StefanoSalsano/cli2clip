@@ -149,6 +149,10 @@ whether to copy it. I press Enter and paste it back to you.
 Rules for those blocks:
 
 - one block, ready to paste as it is, with no placeholders for me to fill in;
+- on Linux the block runs only inside tmux: outside it `cli2clip` refuses before
+  running anything, and says so. If I tell you I am not in tmux and will not
+  start one, write the block as `cli2clip --no-tmux <<'EOF'`, which runs it and
+  keeps the output in a file instead of the clipboard;
 - begin with an absolute cd, never rely on the directory I happen to be in;
 - state in a comment which machine and which shell the block is for, when there
   is more than one;
