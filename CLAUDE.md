@@ -32,6 +32,18 @@ prove the interaction with a real tmux server, nor anything about the clipboard
 actually reaching a terminal. When reporting the check, say which of the two you
 did -- a "verified" that silently means the first one is how a defect survives.
 
+## Testing a change to `--update`
+
+**The code that performs an update is always the previous version's.** Jumping a
+machine to version N exercises N-1's `--update`; the behaviour introduced in N
+only shows on the jump *after* that. So the first run on a host proves nothing
+about what you just changed -- run it twice, or the second run is the test.
+
+The same applies to the option existing at all: a host on a version older than
+the one that added `--update` has to be moved with the README's curl snippet
+first. Both halves of this bit us on 16/9/2026, the second time within an hour
+of noticing the first.
+
 ## Scope
 
 The tmux guard, `--no-tmux` and `--version` are bash-only by design: on Windows
