@@ -12,6 +12,17 @@
 #     git log --oneline -3
 #     EOF
 #
+# It refuses to run outside tmux, or with tmux set-clipboard off, because in
+# both cases the output could not reach the clipboard -- see below. To run a
+# block anyway, with no clipboard and no question:
+#
+#     cli2clip --no-tmux <<'EOF'
+#     ...
+#     EOF
+#
+# `cli2clip --version` prints the version and the path this file was loaded
+# from, and is answered before the tmux check, so it works anywhere.
+#
 # The output is printed as it happens and captured to a temporary file. When the
 # whole block has finished, and only then, you are asked whether to copy it to
 # the clipboard: the clipboard stays free while the commands run, which matters
@@ -22,10 +33,17 @@
 # reached is the one of the machine where your *terminal* runs, not the one of
 # the machine where the commands run -- which is the point when you are working
 # over ssh. It requires a running tmux server and a terminal that supports
-# OSC 52 (Windows Terminal, iTerm2, kitty, foot, recent xterm, ...). If tmux is
-# not reachable, the capture file is kept and its path is printed.
+# OSC 52 (Windows Terminal, iTerm2, kitty, foot, recent xterm, ...). Those
+# conditions are checked before the block runs, not after: see the guard.
 #
 # https://github.com/StefanoSalsano/cli2clip -- MIT licensed
+
+# One version for the project, carried by both scripts and bumped in the same
+# commit as any change to either -- see CLAUDE.md. The path is recorded next to
+# it because on a machine with several copies around ("the repo one or the
+# installed one?") the path is half the answer to "which version am I running".
+_CLI2CLIP_VERSION='1.0.0'
+_CLI2CLIP_SOURCE=${BASH_SOURCE[0]}
 
 # Say so when the file is sourced a second time. The first load, from .bashrc,
 # stays silent; a reload after editing the file is the moment you want a
@@ -64,7 +82,61 @@ _cli2clip_decomposable() {
 }
 
 cli2clip() {
-	local f ans src prelude script line quoted
+	local f ans src prelude script line quoted no_tmux=
+
+	# Refuse before running anything when the clipboard cannot be reached.
+	# Checking afterwards is what made this worth fixing: the block runs for
+	# minutes, you answer the question, and only then you are told the output
+	# stayed in a file -- with nothing to paste into the conversation you were
+	# in the middle of.
+	#
+	# The test is $TMUX -- being inside a tmux client -- and not whether a tmux
+	# server answers. `load-buffer -w` sends the OSC 52 to the client's
+	# terminal, so from outside a client it can exit 0 and report a copy that
+	# never reached the terminal you are looking at. set-clipboard off is the
+	# same failure from the other side: the sequence is simply not forwarded.
+	# `external` forwards it and is therefore fine; only `off` is fatal.
+	# --version is answered before the guard on purpose: the moment you want the
+	# version is when you are looking at an unfamiliar machine, which is exactly
+	# where tmux may be missing. A guard that hid it there would be useless.
+	case "$1" in
+		--version)
+			printf 'cli2clip %s\nloaded from %s\n' \
+				"$_CLI2CLIP_VERSION" "$_CLI2CLIP_SOURCE"
+			return 0 ;;
+		--no-tmux) no_tmux=1; shift ;;
+		-*) echo "cli2clip: unknown option $1" >&2; return 2 ;;
+	esac
+	if [ -z "$no_tmux" ]; then
+		if [ -z "$TMUX" ]; then
+			printf '%s\n' \
+				"cli2clip: not inside tmux, so nothing could be copied." \
+				"The clipboard is reached with OSC 52 through tmux; without it the" \
+				"block would run and its output would only be kept in a file." \
+				"" \
+				"    tmux new -A -s main     # start or re-attach, then run the block" \
+				"" \
+				"To run the block anyway, with no clipboard and no question:" \
+				"" \
+				"    cli2clip --no-tmux <<'EOF'" \
+				"    ..." \
+				"    EOF" >&2
+			return 1
+		fi
+		if [ "$(tmux show -gv set-clipboard 2>/dev/null)" = off ]; then
+			printf '%s\n' \
+				"cli2clip: tmux set-clipboard is off, so nothing could be copied." \
+				"" \
+				"    tmux set -g set-clipboard on" \
+				"" \
+				"To run the block anyway, with no clipboard and no question:" \
+				"" \
+				"    cli2clip --no-tmux <<'EOF'" \
+				"    ..." \
+				"    EOF" >&2
+			return 1
+		fi
+	fi
 
 	f=$(mktemp /tmp/cli2clip-XXXXXX.txt) || return 1
 	src=$(cat)
@@ -96,6 +168,13 @@ ${line}
 ${script}" 2>&1 | tee "$f"
 
 	echo
+	if [ -n "$no_tmux" ]; then
+		# No clipboard to offer, so no question: a keypress that can only
+		# lead to one answer is noise.
+		echo "no tmux: output kept in $f"
+		return 0
+	fi
+
 	# Discard whatever was typed while the block was running. A block can take
 	# minutes, and anything that lands in the terminal meanwhile stays queued: the
 	# question below would eat its first character as the answer -- declining the

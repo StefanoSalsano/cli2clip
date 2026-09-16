@@ -20,6 +20,11 @@
 # On Windows the clipboard is the local one and Set-Clipboard just works, so
 # unlike the bash version there is no tmux involved and no fallback needed.
 #
+# Version: 1.0.0 -- one version for the project, shared with cli2clip.sh and
+# bumped in the same commit as any change to either script (see CLAUDE.md).
+# A -Version switch is not implemented here yet: the bash script answers
+# `cli2clip --version`, this one only declares the number.
+#
 # https://github.com/StefanoSalsano/cli2clip -- MIT licensed
 
 # Say so when the file is sourced a second time. The first load, from the

@@ -168,6 +168,14 @@ cli2clip {
 }
 ```
 
+The bash version refuses to run outside tmux, or with tmux `set-clipboard off`,
+because the clipboard could not be reached either way; `--no-tmux` runs the block
+anyway. See [How the clipboard is reached](#how-the-clipboard-is-reached).
+
+`cli2clip --version` prints the version and the path the function was loaded
+from. It is answered before the tmux check, so it works on any machine, which is
+where you need it.
+
 Anything the shell can do works inside the block: loops, pipelines, heredocs,
 function definitions. Variables set inside do not leak into your session, but
 they are visible to the following commands *within* the block, so `URL=...` on
@@ -247,20 +255,54 @@ This has two consequences worth knowing:
   kitty, foot and recent xterm do; some others do not, and a few impose a size
   limit on what they will accept.
 
-If tmux is not reachable, nothing is lost: the capture file stays and its path
-is printed.
+The bash version checks both before running the block, and refuses if either is
+missing -- outside tmux, or with `set-clipboard off`. Finding out afterwards was
+the whole problem: the block runs for minutes, you answer the question, and only
+then are you told that the output stayed in a file, with nothing to paste into
+the conversation you were in the middle of. The test is whether you are *inside*
+a tmux client, not whether a server answers somewhere: `load-buffer -w` sends the
+escape sequence to the client's terminal, so from outside a client it can report
+a copy that never reached the terminal you are looking at. `set-clipboard
+external` forwards the sequence and is fine; only `off` is refused.
+
+To run a block on a machine with no tmux, pass `--no-tmux`. The block runs, the
+capture file is kept and its path is printed, and no question is asked -- there
+is no clipboard to offer:
+
+```bash
+cli2clip --no-tmux <<'EOF'
+uname -a
+EOF
+```
 
 ### Nested sessions
 
 If you are several hops deep — ssh into a host, then into a container, then into
 a virtual machine — the innermost shell usually has no tmux server of its own,
-and `cli2clip` there will just keep the file. That is expected. The tmux session
-you started at the *outer* hop can still see everything that scrolled past, so
-capture from there instead:
+and `cli2clip` there will refuse to run. Either pass `--no-tmux` and read the
+capture file it leaves behind, or capture from the *outer* hop: the tmux session
+you started there can still see everything that scrolled past.
 
 ```bash
 tmux capture-pane -p -S -500 | tail -n 100 | tmux load-buffer -w -
 ```
+
+## Versioning
+
+Both scripts carry one project version, bumped together whenever either changes.
+The bash version prints it:
+
+```
+$ cli2clip --version
+cli2clip 1.0.0
+loaded from /home/user/.cli2clip.sh
+```
+
+The path is there because the question behind "which version" is usually "which
+copy am I running" -- the installed one or a clone. A copy installed before
+1.0.0 has no such option and answers `unknown option --version`, which is an
+answer of its own. The PowerShell script declares the same number in its header;
+a `-Version` switch there is not implemented yet.
 
 ## License
 
