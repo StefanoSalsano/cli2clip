@@ -42,16 +42,25 @@
 # commit as any change to either -- see CLAUDE.md. The path is recorded next to
 # it because on a machine with several copies around ("the repo one or the
 # installed one?") the path is half the answer to "which version am I running".
-_CLI2CLIP_VERSION='1.0.0'
+_cli2clip_was=${_CLI2CLIP_VERSION:-unknown}
+_CLI2CLIP_VERSION='1.0.1'
 _CLI2CLIP_SOURCE=${BASH_SOURCE[0]}
 
 # Say so when the file is sourced a second time. The first load, from .bashrc,
-# stays silent; a reload after editing the file is the moment you want a
-# confirmation, and the path tells you which copy you loaded -- the repo or the
-# installed one -- which is the usual mistake.
+# stays silent; a reload after editing or updating the file is the moment you
+# want a confirmation, and it answers both halves of the question you actually
+# have: WHICH copy did I load (the path -- repo or installed, the usual
+# mistake) and DID THE UPDATE ARRIVE (the version, and the one it replaced).
+# The previous number is still in the environment at this point, which is what
+# makes the second half free.
 if declare -F cli2clip >/dev/null 2>&1; then
-	echo "cli2clip: reloaded from ${BASH_SOURCE[0]}"
+	if [ "$_cli2clip_was" = "$_CLI2CLIP_VERSION" ]; then
+		echo "cli2clip: reloaded $_CLI2CLIP_VERSION from $_CLI2CLIP_SOURCE"
+	else
+		echo "cli2clip: reloaded $_CLI2CLIP_VERSION (was $_cli2clip_was) from $_CLI2CLIP_SOURCE"
+	fi
 fi
+unset _cli2clip_was
 
 # Can the block be split into one command per line?
 #

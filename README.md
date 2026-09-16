@@ -294,7 +294,7 @@ The bash version prints it:
 
 ```
 $ cli2clip --version
-cli2clip 1.0.0
+cli2clip 1.0.1
 loaded from /home/user/.cli2clip.sh
 ```
 
